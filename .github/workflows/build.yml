@@ -41,10 +41,11 @@ jobs:
           vpk pack `
             --packId "Divalto" `
             --packVersion "1.0.0-build.${{ github.run_number }}" `
-            --entryExe "Divalto.exe" `
-            --icon "Assets\\icon.ico" `
-            --packDirectory "./publish" `
-            --outputDirectory "./dist"
+            --mainExe "Divalto.exe" `
+            --icon "Assets\icon.ico" `
+            --packDir "./publish" `
+            --outputDir "./dist"
+
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
