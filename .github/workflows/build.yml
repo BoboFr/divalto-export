@@ -33,7 +33,7 @@ jobs:
 
       - name: Install Velopack CLI
         run: |
-          dotnet tool install -g Velopack.Cli
+          dotnet tool install -g vpk
           echo "$env:USERPROFILE\.dotnet\tools" >> $env:GITHUB_PATH
 
       - name: Build Velopack package
