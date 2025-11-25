@@ -429,6 +429,7 @@ namespace Divalto.ViewModels
                 AvailableTables.Add(new TableInfo("Pièces - Entêtes", "ENT"));
                 AvailableTables.Add(new TableInfo("Pièces - Mouvements", "MOUV"));
                 AvailableTables.Add(new TableInfo("Contrat", "CEACONTRAT"));
+                AvailableTables.Add(new TableInfo("Lignes Contrat", "CONTRATLMAT"));
 
                 Logger.Instance.LogSuccess("Liste des tables initialisée");
             }

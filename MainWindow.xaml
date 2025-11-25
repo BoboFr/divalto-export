@@ -6,7 +6,7 @@
         xmlns:local="clr-namespace:Divalto"
         xmlns:converters="clr-namespace:Divalto.Converters"
         mc:Ignorable="d"
-        Title="Divalto"
+        Title="Exports DIVALTO"
         Height="700"
         Width="1200"
         Background="#ffffff"
