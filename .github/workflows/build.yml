@@ -58,6 +58,7 @@ jobs:
           body: Build automatique depuis CI
           draft: false
           prerelease: false
+          make_latest: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
