@@ -31,11 +31,13 @@ dotnet publish -c Release
 ```
 
 Cette commande génère un **exécutable unique** (`Divalto.exe`) d'environ 9.5 MB dans :
+
 ```
 bin\Release\net7.0-windows\win-x64\publish\
 ```
 
 **Caractéristiques de la publication :**
+
 - **Self-contained** : Inclut le runtime .NET (pas besoin d'installer .NET sur la machine cible)
 - **Single file** : Un seul fichier `.exe` à distribuer
 - **Platform** : Windows x64 uniquement
@@ -54,10 +56,10 @@ dotnet restore
 
 ## Dépendances
 
-| Package | Version | Description |
-|---------|---------|-------------|
-| System.Data.SqlClient | 4.8.6 | Connexion SQL Server |
-| ClosedXML | 0.102.1 | Export Excel |
+| Package               | Version | Description          |
+| --------------------- | ------- | -------------------- |
+| System.Data.SqlClient | 4.8.6   | Connexion SQL Server |
+| ClosedXML             | 0.102.1 | Export Excel         |
 
 ## Structure du projet
 
@@ -69,5 +71,6 @@ Divalto/
 ├── Commands/       # Commandes WPF (RelayCommand)
 ├── Converters/     # Convertisseurs XAML
 ├── Helpers/        # Utilitaires
+├── Assets/         # Assets du projet
 └── Interfaces/     # Interfaces
 ```
