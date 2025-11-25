@@ -40,7 +40,7 @@ jobs:
         run: |
           vpk pack `
             --packId "Divalto" `
-            --packVersion "${{ github.run_number }}" `
+            --packVersion "1.0.0-build.${{ github.run_number }}" `
             --entryExe "Divalto.exe" `
             --icon "Assets\\icon.ico" `
             --packDirectory "./publish" `
