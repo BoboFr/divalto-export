@@ -4,7 +4,7 @@ Application WPF pour la connexion à des bases de données MSSQL et l'export de 
 
 ## Prérequis
 
-- [.NET 7 SDK](https://dotnet.microsoft.com/download/dotnet/7.0) ou supérieur
+- [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0) ou supérieur
 
 ## Build
 
