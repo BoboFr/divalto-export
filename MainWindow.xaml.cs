@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics;
+using System.Reflection;
 using System.Windows;
 using System.Windows.Controls;
 using Divalto.ViewModels;
@@ -38,7 +39,9 @@ namespace Divalto
                 Debug.WriteLine("MainWindow_Loaded : Demarrage");
 
                 // Ajouter la version au titre
-                var version = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
+                var assembly = Assembly.GetExecutingAssembly();
+                var fileVersionAttribute = assembly.GetCustomAttribute<AssemblyFileVersionAttribute>();
+                var version = fileVersionAttribute?.Version ?? assembly.GetName().Version?.ToString() ?? "0.0.0.0";
                 this.Title = $"Exports DIVALTO - v{version}";
                 Debug.WriteLine($"MainWindow_Loaded : Titre mis à jour avec la version {version}");
 

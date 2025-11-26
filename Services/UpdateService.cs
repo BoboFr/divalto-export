@@ -19,6 +19,7 @@ namespace Divalto.Services
 
         public event EventHandler<UpdateCheckEventArgs>? UpdateCheckCompleted;
         public event EventHandler<string>? UpdateError;
+        public event EventHandler<ProgressEventArgs>? ProgressChanged;
 
         public UpdateService()
         {
@@ -115,7 +116,7 @@ namespace Divalto.Services
         }
 
         /// <summary>
-        /// Télécharge et installe la mise à jour
+        /// Télécharge et installe la mise à jour avec suivi de progression
         /// </summary>
         public async Task<bool> DownloadAndInstallUpdateAsync()
         {
@@ -132,44 +133,100 @@ namespace Divalto.Services
                 using (var client = new HttpClient())
                 {
                     client.DefaultRequestHeaders.Add("User-Agent", "Divalto-Update-Download");
+                    client.Timeout = TimeSpan.FromMinutes(10);
 
-                    // Télécharger le nouvel executable
-                    var response = await client.GetAsync(_downloadUrl);
+                    // Télécharger avec rapport de progression
+                    var response = await client.GetAsync(_downloadUrl, HttpCompletionOption.ResponseHeadersRead);
                     if (!response.IsSuccessStatusCode)
                     {
                         UpdateError?.Invoke(this, $"Impossible de télécharger la mise à jour : {response.StatusCode}");
                         return false;
                     }
 
-                    // Sauvegarder dans un fichier temporaire
+                    var totalBytes = response.Content.Headers.ContentLength ?? -1L;
                     var tempPath = Path.Combine(Path.GetTempPath(), "Divalto_Update.exe");
-                    var exeContent = await response.Content.ReadAsByteArrayAsync();
-                    File.WriteAllBytes(tempPath, exeContent);
+
+                    using (var contentStream = await response.Content.ReadAsStreamAsync())
+                    using (var fileStream = File.Create(tempPath))
+                    {
+                        var totalRead = 0L;
+                        var buffer = new byte[8192];
+                        int bytesRead;
+
+                        while ((bytesRead = await contentStream.ReadAsync(buffer, 0, buffer.Length)) > 0)
+                        {
+                            await fileStream.WriteAsync(buffer, 0, bytesRead);
+                            totalRead += bytesRead;
+
+                            // Signaler la progression
+                            ProgressChanged?.Invoke(this, new ProgressEventArgs { BytesDownloaded = totalRead, TotalBytes = totalBytes });
+                        }
+                    }
 
                     Debug.WriteLine($"Mise à jour téléchargée : {tempPath}");
-                    Debug.WriteLine("Redémarrage de l'application...");
+
+                    // Sauvegarder le chemin du nouvel exe en tant que backup de l'ancien
+                    var exePath = Process.GetCurrentProcess().MainModule?.FileName ?? "Divalto.exe";
+                    var backupPath = exePath + ".bak";
 
                     // Créer un script batch pour remplacer l'exe et redémarrer
+                    // Utiliser taskkill pour arrêter l'application proprement et éviter le verrouillage
                     var batchPath = Path.Combine(Path.GetTempPath(), "Divalto_Update.bat");
-                    var exePath = Process.GetCurrentProcess().MainModule?.FileName ?? "Divalto.exe";
+                    var processId = Process.GetCurrentProcess().Id;
 
                     var batchContent = $@"@echo off
-timeout /t 2 /nobreak
-del /f /q ""{exePath}""
-move ""{tempPath}"" ""{exePath}""
-start """" ""{exePath}""
-del /f /q ""%~f0""";
+setlocal enabledelayedexpansion
+
+REM Tuer le processus Divalto.exe s'il existe encore
+taskkill /F /IM Divalto.exe 2>nul
+
+REM Attendre que l'application se ferme complètement et que les fichiers soient libérés
+timeout /t 5 /nobreak
+
+REM Supprimer le backup précédent s'il existe
+if exist ""{backupPath}"" del /f /q ""{backupPath}""
+
+REM Créer un backup de l'ancien exe
+if exist ""{exePath}"" (
+    move /y ""{exePath}"" ""{backupPath}""
+)
+
+REM Copier la nouvelle version
+copy /y ""{tempPath}"" ""{exePath}""
+
+REM Nettoyer le fichier temporaire
+if exist ""{tempPath}"" del /f /q ""{tempPath}""
+
+REM Redémarrer l'application
+if exist ""{exePath}"" (
+    start """" ""{exePath}""
+) else (
+    REM Si le déplacement a échoué, restaurer depuis le backup
+    if exist ""{backupPath}"" (
+        copy /y ""{backupPath}"" ""{exePath}""
+        start """" ""{exePath}""
+    )
+)
+
+REM Attendre un peu avant de supprimer le batch
+timeout /t 1 /nobreak
+
+REM Supprimer ce batch file
+del /f /q ""%~f0""
+";
 
                     File.WriteAllText(batchPath, batchContent);
+                    Debug.WriteLine($"Script batch créé : {batchPath}");
 
-                    // Exécuter le script et fermer l'application
+                    // Exécuter le script en arrière-plan
                     Process.Start(new ProcessStartInfo
                     {
                         FileName = batchPath,
-                        UseShellExecute = false,
+                        UseShellExecute = true,
                         CreateNoWindow = true
                     });
 
+                    Debug.WriteLine("Fermeture de l'application...");
                     // Fermer l'application
                     System.Windows.Application.Current?.Shutdown();
 
@@ -261,5 +318,14 @@ del /f /q ""%~f0""";
         public string NewVersion { get; set; } = "";
         public string ReleaseNotes { get; set; } = "";
         public bool IsPrerelease { get; set; }
+    }
+
+    /// <summary>
+    /// Événement pour le suivi de la progression du téléchargement
+    /// </summary>
+    public class ProgressEventArgs : EventArgs
+    {
+        public long BytesDownloaded { get; set; }
+        public long TotalBytes { get; set; }
     }
 }

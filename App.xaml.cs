@@ -17,6 +17,7 @@ namespace Divalto
     public partial class App : Application
     {
         private UpdateService? _updateService;
+        private UpdateProgressWindow? _progressWindow;
 
         public App()
         {
@@ -33,6 +34,7 @@ namespace Divalto
                 _updateService = new UpdateService();
                 _updateService.UpdateCheckCompleted += UpdateService_UpdateCheckCompleted;
                 _updateService.UpdateError += UpdateService_UpdateError;
+                _updateService.ProgressChanged += UpdateService_ProgressChanged;
 
                 // Vérifier les mises à jour en arrière-plan (sans bloquer l'interface)
                 _ = Task.Run(() => _updateService.CheckForUpdatesAsync());
@@ -66,13 +68,40 @@ namespace Divalto
                     {
                         _ = Task.Run(async () =>
                         {
-                            if (await _updateService.DownloadAndInstallUpdateAsync())
+                            try
                             {
-                                MessageBox.Show(
-                                    "La mise à jour a été installée. L'application va redémarrer.",
-                                    "Succès",
-                                    MessageBoxButton.OK,
-                                    MessageBoxImage.Information);
+                                // Créer et afficher la modale sur le thread UI
+                                Current.Dispatcher.Invoke(() =>
+                                {
+                                    _progressWindow = new UpdateProgressWindow();
+                                    _progressWindow.Show();
+                                });
+
+                                if (await _updateService.DownloadAndInstallUpdateAsync())
+                                {
+                                    // La fenêtre se fermera quand l'application redémarrera
+                                }
+                                else
+                                {
+                                    // Fermer la fenêtre en cas d'erreur
+                                    Current.Dispatcher.Invoke(() =>
+                                    {
+                                        _progressWindow?.Close();
+                                        MessageBox.Show(
+                                            "La mise à jour a échoué.",
+                                            "Erreur",
+                                            MessageBoxButton.OK,
+                                            MessageBoxImage.Error);
+                                    });
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                Debug.WriteLine($"Erreur lors du téléchargement : {ex.Message}");
+                                Current.Dispatcher.Invoke(() =>
+                                {
+                                    _progressWindow?.Close();
+                                });
                             }
                         });
                     }
@@ -94,6 +123,20 @@ namespace Divalto
         private void UpdateService_UpdateError(object? sender, string errorMessage)
         {
             Debug.WriteLine($"Erreur de mise à jour : {errorMessage}");
+        }
+
+        /// <summary>
+        /// Gère la progression du téléchargement
+        /// </summary>
+        private void UpdateService_ProgressChanged(object? sender, ProgressEventArgs e)
+        {
+            if (_progressWindow != null)
+            {
+                _progressWindow.Dispatcher.Invoke(() =>
+                {
+                    _progressWindow.UpdateProgress(e.BytesDownloaded, e.TotalBytes);
+                });
+            }
         }
     }
 }
