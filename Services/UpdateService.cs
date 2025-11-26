@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics;
+using System.IO;
 using System.Net.Http;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -129,14 +130,22 @@ namespace Divalto.Services
         }
 
         /// <summary>
-        /// Obtient la version actuelle de l'application
+        /// Obtient la version actuelle de l'application (AssemblyFileVersion)
         /// </summary>
-        private string GetCurrentVersion()
+        private static string GetCurrentVersion()
         {
             try
             {
-                var version = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
-                return version?.ToString() ?? "1.0.0.0";
+                var exePath = Process.GetCurrentProcess().MainModule?.FileName
+                    ?? Path.Combine(AppContext.BaseDirectory, "Divalto.exe");
+
+                if (File.Exists(exePath))
+                {
+                    var fileVersionInfo = FileVersionInfo.GetVersionInfo(exePath);
+                    return fileVersionInfo.FileVersion ?? "1.0.0.0";
+                }
+
+                return "1.0.0.0";
             }
             catch
             {
@@ -148,7 +157,7 @@ namespace Divalto.Services
         /// Compare deux versions au format "v1.0.0" ou "1.0.0"
         /// Retourne > 0 si v2 > v1, 0 si égales, < 0 si v2 < v1
         /// </summary>
-        private int CompareVersions(string newVersion, string currentVersion)
+        private static int CompareVersions(string newVersion, string currentVersion)
         {
             try
             {
