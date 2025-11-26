@@ -31,33 +31,11 @@ jobs:
       - name: Publish
         run: dotnet publish --configuration Release --no-build --output ./publish
 
-      - name: Install Velopack CLI
-        run: |
-          dotnet tool install -g vpk
-          echo "$env:USERPROFILE\.dotnet\tools" >> $env:GITHUB_PATH
-
-      - name: Build Velopack package
-        run: |
-          vpk pack `
-            --packId "Divalto" `
-            --packVersion "1.0.0-build.${{ github.run_number }}" `
-            --mainExe "Divalto.exe" `
-            --icon "Assets\icon.ico" `
-            --packDir "./publish" `
-            --outputDir "./dist"
-
-
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: Divalto-win-x64
           path: ./publish/
-
-      - name: Upload Velopack package
-        uses: actions/upload-artifact@v4
-        with:
-          name: Divalto-velopack
-          path: ./dist/
 
   release:
     runs-on: ubuntu-latest
@@ -70,12 +48,6 @@ jobs:
         with:
           name: Divalto-win-x64
           path: ./publish
-
-      - name: Download Velopack package
-        uses: actions/download-artifact@v4
-        with:
-          name: Divalto-velopack
-          path: ./dist
 
       - name: Create GitHub Release
         id: create_release
@@ -94,7 +66,6 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           files: |
-            ./dist/**/*
             ./publish/**/*
           tag_name: "v${{ github.run_number }}"
         env:

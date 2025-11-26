@@ -1,11 +1,8 @@
 using System;
 using System.Diagnostics;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using Divalto.ViewModels;
-using Velopack;
-using Velopack.Sources;
 
 namespace Divalto
 {
@@ -14,7 +11,6 @@ namespace Divalto
     /// </summary>
     public partial class MainWindow : Window
     {
-        private const string GithubRepoUrl = "https://github.com/BoboFr/divalto-export";
         private ConnectionViewModel? _viewModel;
 
         public MainWindow()
@@ -22,7 +18,6 @@ namespace Divalto
             try
             {
                 InitializeComponent();
-                VelopackApp.Build().Run();
             }
             catch (Exception ex)
             {
@@ -48,8 +43,6 @@ namespace Divalto
 
                 this.DataContext = _viewModel;
                 Debug.WriteLine("MainWindow_Loaded : DataContext assigne");
-
-                await RunAutoUpdateAsync();
 
                 // Enregistrer l'evenement de fermeture
                 this.Closing += OnWindowClosing;
@@ -139,46 +132,6 @@ namespace Divalto
             _viewModel?.CancelExport();
         }
 
-        /// <summary>
-        /// Vérifie et applique automatiquement les mises à jour Velopack depuis la release GitHub "latest".
-        /// </summary>
-        private async Task RunAutoUpdateAsync()
-        {
-            try
-            {
-                using var mgr = new UpdateManager(
-                    new GithubSource(GithubRepoUrl, accessToken: null, prerelease: false, downloader: null));
-
-                if (!mgr.IsInstalled)
-                {
-                    Debug.WriteLine("Velopack: application non installée, mise à jour ignorée.");
-                    return;
-                }
-
-                if (mgr.UpdatePendingRestart is VelopackAsset pending)
-                {
-                    Debug.WriteLine("Velopack: application d'une mise à jour en attente, redémarrage...");
-                    mgr.ApplyUpdatesAndRestart(pending);
-                    return;
-                }
-
-                var update = await mgr.CheckForUpdatesAsync();
-                if (update == null)
-                {
-                    Debug.WriteLine("Velopack: aucune mise à jour disponible.");
-                    return;
-                }
-
-                Debug.WriteLine($"Velopack: mise à jour trouvée vers {update.TargetFullRelease.Version}, téléchargement...");
-                await mgr.DownloadUpdatesAsync(update);
-                Debug.WriteLine("Velopack: application de la mise à jour et redémarrage.");
-                mgr.ApplyUpdatesAndRestart(update.TargetFullRelease);
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"Velopack: mise à jour automatique ignorée ({ex.Message}).");
-            }
-        }
     }
 }
 
