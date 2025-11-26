@@ -38,11 +38,29 @@ jobs:
           path: ./publish/
 
   release:
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     needs: build
     if: github.event_name == 'push'
 
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Extract version from AssemblyFileVersion
+        id: version
+        shell: pwsh
+        run: |
+          $content = Get-Content 'AssemblyInfo.cs' -Raw
+          $match = [regex]::Match($content, 'AssemblyFileVersion\("([^"]+)"\)')
+          if ($match.Success) {
+            $version = $match.Groups[1].Value
+            echo "version=$version" >> $env:GITHUB_OUTPUT
+            echo "Version extracted: $version"
+          } else {
+            echo "Could not extract version"
+            exit 1
+          }
+
       - name: Download artifact
         uses: actions/download-artifact@v4
         with:
@@ -53,9 +71,11 @@ jobs:
         id: create_release
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: v${{ github.run_number }}
-          name: Build ${{ github.run_number }}
-          body: Build automatique depuis CI
+          tag_name: v${{ steps.version.outputs.version }}
+          name: Release v${{ steps.version.outputs.version }}
+          body: |
+            Version: ${{ steps.version.outputs.version }}
+            Build automatique depuis CI
           draft: false
           prerelease: false
           make_latest: true
@@ -67,6 +87,6 @@ jobs:
         with:
           files: |
             ./publish/**/*
-          tag_name: "v${{ github.run_number }}"
+          tag_name: "v${{ steps.version.outputs.version }}"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
