@@ -28,10 +28,10 @@ namespace Divalto.Services
 
         private Logger()
         {
-            // Créer le répertoire Logs dans le dossier de l'application
+            // Créer le répertoire Logs dans le dossier temporaire du système
             _logDirectory = Path.Combine(
-                AppDomain.CurrentDomain.BaseDirectory,
-                "Logs"
+                Path.GetTempPath(),
+                "Divalto_Export"
             );
 
             // Créer le répertoire s'il n'existe pas
