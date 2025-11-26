@@ -46,6 +46,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '7.0.x'
+
       - name: Extract version from AssemblyFileVersion
         id: version
         shell: pwsh
@@ -67,6 +72,24 @@ jobs:
           name: Divalto-win-x64
           path: ./publish
 
+      - name: Install Velopack CLI
+        run: dotnet tool install -g Velopack.Cli
+
+      - name: Create Velopack Release
+        shell: pwsh
+        run: |
+          # Créer le dossier pour les releases Velopack
+          if (!(Test-Path "./releases")) {
+            New-Item -ItemType Directory -Path "./releases" | Out-Null
+          }
+
+          # Générer les packages Velopack
+          vpk pack -u divalto-export -v "${{ steps.version.outputs.version }}" -e ./publish/Divalto.exe -o ./releases --includePortable=false
+
+          # Afficher les fichiers générés
+          Write-Host "Fichiers générés dans ./releases:"
+          Get-ChildItem -Path "./releases" -Recurse | ForEach-Object { Write-Host $_.FullName }
+
       - name: Create GitHub Release
         id: create_release
         uses: softprops/action-gh-release@v1
@@ -75,18 +98,19 @@ jobs:
           name: Release v${{ steps.version.outputs.version }}
           body: |
             Version: ${{ steps.version.outputs.version }}
-            Build automatique depuis CI
+
+            Contient les packages Velopack pour les mises à jour automatiques.
           draft: false
           prerelease: false
           make_latest: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Attach artifacts
+      - name: Attach Velopack artifacts
         uses: softprops/action-gh-release@v1
         with:
           files: |
-            ./publish/**/*
+            ./releases/**/*
           tag_name: "v${{ steps.version.outputs.version }}"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

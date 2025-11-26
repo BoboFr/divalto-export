@@ -14,6 +14,8 @@ namespace Divalto.Services
     {
         private readonly string _githubApiUrl = "https://api.github.com/repos/BoboFr/divalto-export/releases/latest";
         private bool _isCheckingForUpdates = false;
+        private string? _downloadUrl = null;
+        private string? _newVersion = null;
 
         public event EventHandler<UpdateCheckEventArgs>? UpdateCheckCompleted;
         public event EventHandler<string>? UpdateError;
@@ -57,7 +59,6 @@ namespace Divalto.Services
                         var latestVersion = root.GetProperty("tag_name").GetString() ?? "unknown";
                         var releaseNotes = root.GetProperty("body").GetString() ?? "";
                         var isDraft = root.GetProperty("draft").GetBoolean();
-                        var isPrerelease = root.GetProperty("prerelease").GetBoolean();
 
                         // Ignorer les versions de brouillon
                         if (isDraft)
@@ -70,8 +71,26 @@ namespace Divalto.Services
                             return;
                         }
 
+                        // Extraire l'URL de téléchargement du premier asset (Divalto.exe)
+                        var assets = root.GetProperty("assets");
+                        _downloadUrl = null;
+                        foreach (var asset in assets.EnumerateArray())
+                        {
+                            var assetName = asset.GetProperty("name").GetString() ?? "";
+                            if (assetName.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
+                            {
+                                _downloadUrl = asset.GetProperty("browser_download_url").GetString();
+                                break;
+                            }
+                        }
+
                         var currentVersion = GetCurrentVersion();
                         var updateAvailable = CompareVersions(latestVersion, currentVersion) > 0;
+
+                        if (updateAvailable)
+                        {
+                            _newVersion = latestVersion.TrimStart('v');
+                        }
 
                         UpdateCheckCompleted?.Invoke(this, new UpdateCheckEventArgs
                         {
@@ -79,7 +98,7 @@ namespace Divalto.Services
                             CurrentVersion = currentVersion,
                             NewVersion = latestVersion.TrimStart('v'),
                             ReleaseNotes = releaseNotes,
-                            IsPrerelease = isPrerelease
+                            IsPrerelease = false
                         });
                     }
                 }
@@ -102,28 +121,65 @@ namespace Divalto.Services
         {
             try
             {
-                // Utiliser Velopack pour l'installation
-                // La mise à jour est téléchargée par Velopack depuis les releases GitHub
+                if (string.IsNullOrEmpty(_downloadUrl) || string.IsNullOrEmpty(_newVersion))
+                {
+                    UpdateError?.Invoke(this, "Aucune mise à jour disponible à installer");
+                    return false;
+                }
+
+                Debug.WriteLine($"Téléchargement de la mise à jour {_newVersion}...");
+
                 using (var client = new HttpClient())
                 {
                     client.DefaultRequestHeaders.Add("User-Agent", "Divalto-Update-Download");
-                    var response = await client.GetAsync(_githubApiUrl);
 
+                    // Télécharger le nouvel executable
+                    var response = await client.GetAsync(_downloadUrl);
                     if (!response.IsSuccessStatusCode)
                     {
-                        UpdateError?.Invoke(this, "Impossible de télécharger la mise à jour");
+                        UpdateError?.Invoke(this, $"Impossible de télécharger la mise à jour : {response.StatusCode}");
                         return false;
                     }
 
-                    // Velopack gère automatiquement le téléchargement et l'installation
-                    // À partir des releases disponibles sur GitHub
-                    Debug.WriteLine("Mise à jour téléchargée, redémarrage de l'application...");
+                    // Sauvegarder dans un fichier temporaire
+                    var tempPath = Path.Combine(Path.GetTempPath(), "Divalto_Update.exe");
+                    var exeContent = await response.Content.ReadAsByteArrayAsync();
+                    File.WriteAllBytes(tempPath, exeContent);
+
+                    Debug.WriteLine($"Mise à jour téléchargée : {tempPath}");
+                    Debug.WriteLine("Redémarrage de l'application...");
+
+                    // Créer un script batch pour remplacer l'exe et redémarrer
+                    var batchPath = Path.Combine(Path.GetTempPath(), "Divalto_Update.bat");
+                    var exePath = Process.GetCurrentProcess().MainModule?.FileName ?? "Divalto.exe";
+
+                    var batchContent = $@"@echo off
+timeout /t 2 /nobreak
+del /f /q ""{exePath}""
+move ""{tempPath}"" ""{exePath}""
+start """" ""{exePath}""
+del /f /q ""%~f0""";
+
+                    File.WriteAllText(batchPath, batchContent);
+
+                    // Exécuter le script et fermer l'application
+                    Process.Start(new ProcessStartInfo
+                    {
+                        FileName = batchPath,
+                        UseShellExecute = false,
+                        CreateNoWindow = true
+                    });
+
+                    // Fermer l'application
+                    System.Windows.Application.Current?.Shutdown();
+
                     return true;
                 }
             }
             catch (Exception ex)
             {
                 Debug.WriteLine($"Erreur lors de la mise à jour : {ex.Message}");
+                Debug.WriteLine($"StackTrace: {ex.StackTrace}");
                 UpdateError?.Invoke(this, $"Erreur lors de la mise à jour : {ex.Message}");
                 return false;
             }
