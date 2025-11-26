@@ -154,21 +154,44 @@ namespace Divalto.Services
         }
 
         /// <summary>
-        /// Compare deux versions au format "v1.0.0" ou "1.0.0"
+        /// Compare deux versions au format "v1.0.0" ou "1.0.0" ou "v22"
         /// Retourne > 0 si v2 > v1, 0 si égales, < 0 si v2 < v1
         /// </summary>
         private static int CompareVersions(string newVersion, string currentVersion)
         {
             try
             {
-                var v1 = new Version(newVersion.TrimStart('v'));
-                var v2 = new Version(currentVersion);
+                var newVersionStr = newVersion.TrimStart('v');
+                var currVersionStr = currentVersion;
+
+                // Normaliser les versions avec format incomplet (ex: "22" -> "22.0.0.0")
+                var v1 = NormalizeVersion(newVersionStr);
+                var v2 = NormalizeVersion(currVersionStr);
+
                 return v1.CompareTo(v2);
             }
-            catch
+            catch (Exception ex)
             {
+                Debug.WriteLine($"Erreur lors de la comparaison de versions '{newVersion}' vs '{currentVersion}': {ex.Message}");
                 return 0;
             }
+        }
+
+        /// <summary>
+        /// Normalise une version pour qu'elle soit valide (major.minor.build.revision)
+        /// </summary>
+        private static Version NormalizeVersion(string versionStr)
+        {
+            var parts = versionStr.Split('.');
+
+            // Pad avec des zéros si nécessaire
+            while (parts.Length < 4)
+            {
+                versionStr += ".0";
+                parts = versionStr.Split('.');
+            }
+
+            return new Version(versionStr);
         }
     }
 
