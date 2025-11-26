@@ -181,15 +181,7 @@ REM Tuer le processus Divalto.exe s'il existe encore
 taskkill /F /IM Divalto.exe 2>nul
 
 REM Attendre que l'application se ferme complètement et que les fichiers soient libérés
-timeout /t 5 /nobreak
-
-REM Supprimer le backup précédent s'il existe
-if exist ""{backupPath}"" del /f /q ""{backupPath}""
-
-REM Créer un backup de l'ancien exe
-if exist ""{exePath}"" (
-    move /y ""{exePath}"" ""{backupPath}""
-)
+timeout /t 2 /nobreak
 
 REM Copier la nouvelle version
 copy /y ""{tempPath}"" ""{exePath}""
@@ -200,12 +192,6 @@ if exist ""{tempPath}"" del /f /q ""{tempPath}""
 REM Redémarrer l'application
 if exist ""{exePath}"" (
     start """" ""{exePath}""
-) else (
-    REM Si le déplacement a échoué, restaurer depuis le backup
-    if exist ""{backupPath}"" (
-        copy /y ""{backupPath}"" ""{exePath}""
-        start """" ""{exePath}""
-    )
 )
 
 REM Attendre un peu avant de supprimer le batch
