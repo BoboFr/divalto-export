@@ -166,8 +166,27 @@ namespace Divalto.Services
                     Debug.WriteLine($"Mise à jour téléchargée : {tempPath}");
 
                     // Sauvegarder le chemin du nouvel exe en tant que backup de l'ancien
-                    var exePath = Process.GetCurrentProcess().MainModule?.FileName ?? "Divalto.exe";
+                    // Utiliser Environment.ProcessPath (méthode recommandée en .NET 5+)
+                    var exePath = Environment.ProcessPath ??
+                                  Path.Combine(AppContext.BaseDirectory, "Divalto.exe");
+
+                    // Vérifier si le fichier existe et afficher un warning si non
+                    if (!File.Exists(exePath))
+                    {
+                        Debug.WriteLine($"ATTENTION: Le fichier exe n'existe pas au chemin détecté : {exePath}");
+                        // Tenter de trouver Divalto.exe dans le répertoire de base
+                        var alternativePath = Path.Combine(AppContext.BaseDirectory, "Divalto.exe");
+                        if (File.Exists(alternativePath))
+                        {
+                            exePath = alternativePath;
+                            Debug.WriteLine($"Chemin alternatif trouvé : {exePath}");
+                        }
+                    }
+
                     var backupPath = exePath + ".bak";
+
+                    Debug.WriteLine($"Chemin exe final : {exePath}");
+                    Debug.WriteLine($"Fichier existe ? {File.Exists(exePath)}");
 
                     // Créer un script batch pour remplacer l'exe et redémarrer
                     // Utiliser taskkill pour arrêter l'application proprement et éviter le verrouillage
@@ -177,6 +196,12 @@ namespace Divalto.Services
                     var batchContent = $@"@echo off
 setlocal enabledelayedexpansion
 
+echo. > ""{batchPath}.log""
+echo Debut du script >> ""{batchPath}.log""
+echo Chemin source (tempPath): {tempPath} >> ""{batchPath}.log""
+echo Chemin destination (exePath): {exePath} >> ""{batchPath}.log""
+echo Chemin backup (backupPath): {backupPath} >> ""{batchPath}.log""
+
 REM Tuer le processus Divalto.exe s'il existe encore
 taskkill /F /IM Divalto.exe 2>nul
 
@@ -184,31 +209,45 @@ REM Attendre que l'application se ferme complètement et que les fichiers soient
 timeout /t 5 /nobreak
 
 REM Supprimer le backup précédent s'il existe
-if exist ""{backupPath}"" del /f /q ""{backupPath}""
+if exist ""{backupPath}"" (
+    echo Suppression du backup ancien >> ""{batchPath}.log""
+    del /f /q ""{backupPath}""
+)
 
-REM Créer un backup de l'ancien exe
+REM Créer un backup de l'ancien exe (seulement s'il existe)
 if exist ""{exePath}"" (
+    echo Sauvegarde de l'ancien exe >> ""{batchPath}.log""
     move /y ""{exePath}"" ""{backupPath}""
+) else (
+    echo Premiere installation, pas de backup >> ""{batchPath}.log""
 )
 
 REM Copier la nouvelle version
-copy /y ""{tempPath}"" ""{exePath}""
-
-REM Vérifier si la copie a réussi
-if errorlevel 1 (
-    REM Erreur lors de la copie, restaurer depuis le backup
-    if exist ""{backupPath}"" (
-        copy /y ""{backupPath}"" ""{exePath}""
+if exist ""{tempPath}"" (
+    echo Copie du nouveau fichier >> ""{batchPath}.log""
+    copy /y ""{tempPath}"" ""{exePath}""
+    if errorlevel 1 (
+        echo ERREUR lors de la copie >> ""{batchPath}.log""
+        if exist ""{backupPath}"" (
+            echo Restauration depuis le backup >> ""{batchPath}.log""
+            copy /y ""{backupPath}"" ""{exePath}""
+        )
+    ) else (
+        echo Copie reussie >> ""{batchPath}.log""
+        if exist ""{backupPath}"" del /f /q ""{backupPath}""
+        if exist ""{tempPath}"" del /f /q ""{tempPath}""
     )
 ) else (
-    REM Succès : supprimer le backup et le fichier temporaire
-    if exist ""{backupPath}"" del /f /q ""{backupPath}""
-    if exist ""{tempPath}"" del /f /q ""{tempPath}""
+    echo ERREUR: tempPath introuvable >> ""{batchPath}.log""
+    echo Chemin attendu: {tempPath} >> ""{batchPath}.log""
 )
 
 REM Redémarrer l'application
 if exist ""{exePath}"" (
+    echo Demarrage de l'application >> ""{batchPath}.log""
     start """" ""{exePath}""
+) else (
+    echo ERREUR: Impossible de redemarrer, exePath introuvable >> ""{batchPath}.log""
 )
 
 REM Attendre un peu avant de supprimer le batch

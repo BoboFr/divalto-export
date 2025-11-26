@@ -7,7 +7,7 @@ using System.Windows;
 [assembly: AssemblyProduct("Divalto")]
 [assembly: AssemblyCopyright("Copyright © Gaëtan BIORD 2025")]
 [assembly: AssemblyVersion("1.0.0.0")]
-[assembly: AssemblyFileVersion("1.0.0.8")] // Increment this version for each release build
+[assembly: AssemblyFileVersion("1.0.0.9")] // Increment this version for each release build
 
 [assembly: ThemeInfo(
     ResourceDictionaryLocation.None, //where theme specific resource dictionaries are located
