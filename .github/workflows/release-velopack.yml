@@ -1,0 +1,62 @@
+name: Release Velopack
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (e.g., 1.0.1)'
+        required: true
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '7.0.x'
+
+      - name: Install Velopack CLI
+        run: dotnet tool install -g Velopack.Cli
+
+      - name: Restore dependencies
+        run: dotnet restore
+
+      - name: Build Release
+        run: dotnet build --configuration Release --no-restore
+
+      - name: Publish
+        run: dotnet publish --configuration Release --no-build --output ./publish
+
+      - name: Create Velopack Release
+        shell: pwsh
+        run: |
+          # Créer le dossier pour les releases
+          if (!(Test-Path "./releases")) {
+            New-Item -ItemType Directory -Path "./releases"
+          }
+
+          # Créer le package Velopack
+          vpk pack -u divalto-export -v (git describe --tags --always) -e ./publish/Divalto.exe -o ./releases --includePortable=false
+
+      - name: Create GitHub Release
+        id: create_release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            ./releases/**/*
+          draft: false
+          prerelease: false
+          make_latest: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
