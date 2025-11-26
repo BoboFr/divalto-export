@@ -37,6 +37,11 @@ namespace Divalto
             {
                 Debug.WriteLine("MainWindow_Loaded : Demarrage");
 
+                // Ajouter la version au titre
+                var version = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
+                this.Title = $"Exports DIVALTO - v{version}";
+                Debug.WriteLine($"MainWindow_Loaded : Titre mis à jour avec la version {version}");
+
                 // Creer et assigner le ViewModel
                 _viewModel = new ConnectionViewModel();
                 Debug.WriteLine("MainWindow_Loaded : ViewModel cree");

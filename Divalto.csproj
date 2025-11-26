@@ -17,9 +17,6 @@
     <DebugType>embedded</DebugType>
     <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
     <ApplicationIcon>Assets\icon.ico</ApplicationIcon>
-    <!-- Velopack Configuration -->
-    <VeloappTarget>win-x64</VeloappTarget>
-    <UseAppHost>true</UseAppHost>
   </PropertyGroup>
 
   <ItemGroup>
@@ -27,8 +24,6 @@
     <PackageReference Include="System.Data.SqlClient" Version="4.8.6" />
     <!-- ClosedXML: Export Excel sans dépendances COM -->
     <PackageReference Include="ClosedXML" Version="0.102.1" />
-    <!-- Velopack: Système de mise à jour automatique -->
-    <PackageReference Include="Velopack" Version="0.0.1369-g1d5c984" />
   </ItemGroup>
 
 </Project>
