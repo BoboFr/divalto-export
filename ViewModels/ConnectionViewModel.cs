@@ -430,6 +430,9 @@ namespace Divalto.ViewModels
                 AvailableTables.Add(new TableInfo("Pièces - Mouvements", "MOUV"));
                 AvailableTables.Add(new TableInfo("Contrat", "CEACONTRAT"));
                 AvailableTables.Add(new TableInfo("Lignes Contrat", "CONTRATLMAT"));
+                AvailableTables.Add(new TableInfo("Codage carte", "HEL_RCODAGE"));
+                AvailableTables.Add(new TableInfo("Type carte", "HEL_RTYPECARTE"));
+                AvailableTables.Add(new TableInfo("Maquette carte", "HEL_RMAQUETTE"));
 
                 Logger.Instance.LogSuccess("Liste des tables initialisée");
             }
