@@ -425,6 +425,7 @@ namespace Divalto.ViewModels
                 AvailableTables.Clear();
                 AvailableTables.Add(new TableInfo("Matériel", "GMMAT"));
                 AvailableTables.Add(new TableInfo("Clients", "CLI"));
+                AvailableTables.Add(new TableInfo("Prospects", "PRO"));
                 AvailableTables.Add(new TableInfo("Articles", "ART"));
                 AvailableTables.Add(new TableInfo("Pièces - Entêtes", "ENT"));
                 AvailableTables.Add(new TableInfo("Pièces - Mouvements", "MOUV"));
